@@ -1,0 +1,95 @@
+<html>
+    <head>
+        <title>CS 453 Project 1</title>
+        <style>
+            td {
+                padding-right: 15px;
+            }
+        </style>
+    </head>
+    <body>
+        <h1>CS 453 Project 1</h1>
+        <h3>Teacher input:</h3>
+
+        <form action="project1.php">
+            <table>
+                <thead>
+                    <tr>
+                        <td>Textbook 1:</td>
+                        <td></td>
+                        <td>Textbook 2:</td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Title: </td>
+                        <td><input type="text" name="title1"/></td>
+                        <td>Title: </td>
+                        <td><input type="text" name="title2"/></td>
+                    </tr>
+                    <tr>
+                        <td>Publisher: </td>
+                        <td><input type="text" name="publisher1"/></td>
+                        <td>Publisher: </td>
+                        <td><input type="text" name="publisher2"/></td>
+                    </tr>
+                    <tr>
+                        <td>Edition: </td>
+                        <td><input type="number" name="edition1"/></td>
+                        <td>Edition: </td>
+                        <td><input type="number" name="edition2"/></td>
+                    </tr>
+                    <tr>
+                        <td>Printing: </td>
+                        <td><input type="number" name="printing1"/></td>
+                        <td>Printing: </td>
+                        <td><input type="number" name="printing2"/></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" onclick="sendTeacherTextbooks(this.form)">Submit</button>
+        </form>
+        <script type="text/javascript">
+            // Sends the data to the php server about the textbooks the teacher requires
+            function sendTeacherTextbooks(form) {
+                // The variables to send in the request
+                // Titles of both textbooks
+                const title1 = form.title1.value;
+                const title2 = form.title2.value;
+                // Publishers of both textbooks
+                const publisher1 = form.publisher1.value;
+                const publisher2 = form.publisher2.value;
+                // Editions of both textbooks
+                const edition1 = form.edition1.value;
+                const edition2 = form.edition2.value;
+                // Print dates of both textbooks
+                const printing1 = form.printing1.value;
+                const printing2 = form.printing2.value;
+
+                request = new XMLHttpRequest();
+                request.open("GET", "project1.php?title1=" + title1 + "&title2=" + title2 +
+                                    "&publisher1=" + publisher1 + "&publisher2=" + publisher2 +
+                                    "&edition1=" + edition1 + "&edition2=" + edition2 +
+                                    "&printing1=" + printing1 + "&printing2=" + printing2);
+
+                                    alert("project1.php?title1=" + title1 + "&title2=" + title2 +
+                                    "&publisher1=" + publisher1 + "&publisher2=" + publisher2 +
+                                    "&edition1=" + edition1 + "&edition2=" + edition2 +
+                                    "&printing1=" + printing1 + "&printing2=" + printing2)
+
+                request.onreadystatechange = function () {
+                    if (request.readyState == 4) {
+                        if (request.status == 200) {
+                            alert(request.responseText);
+                        } else if (request.status == 404) {
+	                        alert("Server was not found: data returned is :\n"+request.responseText);
+                        }
+                    }
+                };
+
+                request.send();
+            }
+        </script>
+    </body>
+</html>
