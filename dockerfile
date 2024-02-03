@@ -18,15 +18,15 @@ RUN apt-get install -y php-zip
 # install network commands (ip and ifconfig)
 RUN apt-get install -y iproute2
 RUN apt-get install -y net-tools
+# install file converter from Windows to Linux
+RUN apt-get install -y dos2unix
+RUN apt-get clean
 # copy in html and php files
 COPY *.html   /mystuff/
 COPY *.php   /mystuff/
 #COPY myhack.txt   /mystuff/
 COPY *.html /var/www/html/ 
 COPY *.php /var/www/html/ 
-# install file converter from Windows to Linux
-RUN apt-get install -y dos2unix
-RUN apt-get clean
 EXPOSE 80
 CMD ["apache2ctl","-D","FOREGROUND"]
 
