@@ -1,0 +1,97 @@
+<html>
+    <head>
+        <title>CS 453 Project 1</title>
+        <link rel="stylesheet" type="text/css" href="style.css"/>
+    </head>
+    <body onload="getTextbooks()">
+        <!--Buttons to the other pages-->
+        <button disabled>Textbooks</button>
+        <a href="students.html"><button>Students</button></a>
+        <a href="courses.html"><button>Courses</button></a>
+
+        <h3>Textbooks</h3>
+
+        <!--Input to make a new textbook-->
+        <form action="project1.php">
+            <table>
+                <thead>
+                    <tr>
+                        <td>Textbook:</td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Title: </td>
+                        <td><input type="text" name="title"/></td>
+                    </tr>
+                    <tr>
+                        <td>Publisher: </td>
+                        <td><input type="text" name="publisher"/></td>
+                    </tr>
+                    <tr>
+                        <td>Edition: </td>
+                        <td><input type="number" name="edition"/></td>
+                    </tr>
+                    <tr>
+                        <td>Printing: </td>
+                        <td><input type="number" name="printing"/></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" onclick="addTextbook(this.form)">Add Textbook</button>
+        </form>
+
+        <!--List of all the textbooks-->
+        <table class="bordered">
+            <thead>
+                <tr>
+                    <td>Title</td>
+                    <td>Publisher</td>
+                    <td>Edition</td>
+                    <td>Printing</td>
+                </tr>
+            </thead>
+            <tbody id="textbookList">
+                <!--Will be filled in by the php-->
+            </tbody>
+        </table>
+
+        <script type="text/javascript" src="common.js"></script>
+        <script type="text/javascript">
+            // Gets the textbooks and applies them to the html
+            function getTextbooks() {
+                var request = new XMLHttpRequest();
+                request.open("GET", `project1.php?request=getTextbooks`);
+                onRecievedFromRequest(request, function () {
+                    // update textbook html
+                    document.getElementById("textbookList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+            
+            // call the function so that the page is populated on refresh
+            getTextbooks();
+
+            // Adds a new textbook from the input provided by the user
+            function addTextbook(form) {
+                // The variables to send in the request
+                const title = form.title.value;
+                const publisher = form.publisher.value;
+                const edition = form.edition.value;
+                const printing = form.printing.value;
+
+                var request = new XMLHttpRequest();
+                request.open("GET", `project1.php?request=addTextbook&title=${title}&publisher=${publisher}&edition=${edition}&printing=${printing}`);
+
+                onRecievedFromRequest(request, function() {
+                    // update textbook html
+                    document.getElementById("textbookList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+        </script>
+    </body>
+</html>
