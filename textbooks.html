@@ -61,8 +61,9 @@
         <script type="text/javascript">
             // Gets the textbooks and applies them to the html
             function getTextbooks() {
-                var request = new XMLHttpRequest();
+                const request = new XMLHttpRequest();
                 request.open("GET", `project1.php?request=getTextbooks`);
+                
                 onRecievedFromRequest(request, function () {
                     // update textbook html
                     document.getElementById("textbookList").innerHTML = request.responseText;
@@ -82,10 +83,36 @@
                 const edition = form.edition.value;
                 const printing = form.printing.value;
 
-                var request = new XMLHttpRequest();
+                // Check for empty/invalid inputs
+                if (!title) {
+                    alert("You must enter a tile.");
+                    return
+                }
+                if (!publisher) {
+                    alert("You must enter a publisher.");
+                    return;
+                }
+                if (!edition) {
+                    alert("You must enter an edition.");
+                    form.edition.value = null; // reset because this will happen when a non-int is entered
+                    return;
+                }
+                if (!printing) {
+                    alert("You must enter a printing.");
+                    form.printing.value = null; // reset because this will happen when a non-int is entered
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
                 request.open("GET", `project1.php?request=addTextbook&title=${title}&publisher=${publisher}&edition=${edition}&printing=${printing}`);
 
                 onRecievedFromRequest(request, function() {
+                    // check if identical textbook already exists
+                    if (request.responseText === "exists") {
+                        alert("An identical textbook already exists");
+                        return;
+                    }
+
                     // update textbook html
                     document.getElementById("textbookList").innerHTML = request.responseText;
                 });

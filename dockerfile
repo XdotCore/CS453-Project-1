@@ -20,18 +20,19 @@ RUN apt-get install -y iproute2
 RUN apt-get install -y net-tools
 # install file converter from Windows to Linux
 RUN apt-get install -y dos2unix
+# clean installed
 RUN apt-get clean
 # copy in html and php files
 COPY *.html   /mystuff/
 COPY *.php   /mystuff/
 COPY *.css /mystuff/
 COPY *.js /mystuff/
-#COPY myhack.txt   /mystuff/
+# COPY myhack.txt   /mystuff/
 COPY *.html /var/www/html/ 
 COPY *.php /var/www/html/
 COPY *.css /var/www/html
 COPY *.js /var/www/html/
-#Give permission to write to file
+# Give permission to write to file
 RUN chmod -R 777 /var/www/html/
 EXPOSE 80
 CMD ["apache2ctl","-D","FOREGROUND"]

@@ -10,5 +10,108 @@
         <a href="courses.html"><button>Courses</button></a>
 
         <h3>Students</h3>
+
+        <!--Input to make a new textbook-->
+        <form action="project1.php">
+            <table>
+                <thead>
+                    <tr>
+                        <td>Student:</td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Name: </td>
+                        <td><input type="text" name="name"/></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" onclick="addStudent(this.form)">Add Student</button>
+        </form>
+
+        <!--List of all the textbooks-->
+        <table class="bordered">
+            <thead>
+                <tr>
+                    <td>Name</td>
+                    <td>Textbooks</td>
+                    <td>Courses</td>
+                </tr>
+            </thead>
+            <tbody id="studentList">
+                <!--Will be filled in by the php-->
+            </tbody>
+        </table>
+        
+        <script type="text/javascript" src="common.js"></script>
+        <script type="text/javascript">
+            // Gets the students and applies them to the html
+            function getStudents() {
+                var request = new XMLHttpRequest();
+                request.open("GET", `project1.php?request=getStudents`);
+                
+                onRecievedFromRequest(request, function () {
+                    // update student html
+                    document.getElementById("studentList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+            
+            // call the function so that the page is populated on refresh
+            getStudents();
+
+            // Adds a new student from the input provided by the user
+            function addStudent(form) {
+                // The variables to send in the request
+                const name = form.name.value;
+
+                // Check for empty/invalid inputs
+                if (!name) {
+                    alert("You must enter a name.");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                request.open("GET", `project1.php?request=addStudent&studentName=${name}`);
+
+                onRecievedFromRequest(request, function() {
+                    // check if identical student already exists
+                    if (request.responseText === "exists") {
+                        alert("A student with the same name already exists");
+                        return;
+                    }
+
+                    // update student html
+                    document.getElementById("studentList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+
+            // Adds a textbook to the student from the input provided by the user
+            function addTextbookToStudent(form) {
+                // The variables to send in the request
+                const studentAndTextbook = form.options.value;
+
+                // Check for empty/invalid inputs
+                if (!studentAndTextbook) {
+                    alert("You must select a textbook to add one.");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                // studentAndTextbook was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=addTextbookToStudent" + studentAndTextbook);
+
+                onRecievedFromRequest(request, function() {
+                    // update student html
+                    document.getElementById("studentList").innerHTML = request.responseText;
+                })
+
+                request.send();
+            }
+        </script>
     </body>
 </html>
