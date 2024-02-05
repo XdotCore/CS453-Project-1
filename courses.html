@@ -98,7 +98,7 @@
 
                 // Check for empty/invalid inputs
                 if (!courseAndTextbook) {
-                    alert("You must select a textbook to add one.");
+                    alert("You must select a textbook to add one");
                     return;
                 }
 
@@ -114,11 +114,45 @@
                     }
                     if (request.responseText === "textbooknotfound") {
                         alert("The textbook to add to the course could not be found");
+                        return;
                     }
 
                     // update course html
                     document.getElementById("courseList").innerHTML = request.responseText;
                 })
+
+                request.send();
+            }
+
+            // Adds a student to the course from the input provided by the user (also adds the course to the student)
+            function addStudentToCourse(form) {
+                // The variables to send in the request
+                const courseAndStudent = form.options.value;
+
+                // Check for empty/invalid inputs
+                if (!courseAndStudent) {
+                    alert("You must select a student to add one");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                // courseAndStudent was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=addStudentToCourse" + courseAndStudent);
+
+                onRecievedFromRequest(request, function() {
+                    // check for errors
+                    if (request.responseText === "studentnotfound") {
+                        alert("The student to add to the course could not be found");
+                        return;
+                    }
+                    if (request.responseText === "coursenotfound") {
+                        alert("The course to add the student to could not be found");
+                        return;
+                    }
+
+                    // update course html
+                    document.getElementById("courseList").innerHTML = request.responseText;
+                });
 
                 request.send();
             }

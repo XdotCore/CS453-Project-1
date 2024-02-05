@@ -9,3 +9,11 @@ table.bordered td {
 table {
     border-collapse: collapse;
 }
+
+.wrong {
+    background-color: red;
+}
+
+.right {
+    background-color: greenyellow;
+}

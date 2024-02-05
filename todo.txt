@@ -1,11 +1,3 @@
-- add students
- - select courses for students
-- add courses
- - select textbooks for courses
- - limit textbooks to 2 per course
- - select students for courses
- - show textbooks for students in the course
- - show incorrect textbooks
 - delete textbooks
  - remove textbooks from students
  - remove textbooks from courses
@@ -13,3 +5,4 @@
  - remove students from courses
 - delete courses
  - remove courses from students
+- update fields maybe

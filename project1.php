@@ -122,11 +122,8 @@ class Student extends TextbookHaver {
 
     // Adds a course to the student
     // Secondcall is set to true to prevent an infinite loop
-    public function addCourse(Course $course, bool $secondCall = false) : void {
+    public function addCourse(Course $course) : void {
         $this->courses->add($course);
-        if (!$secondCall) {
-            $course->addStudent($this);
-        }
     }
 
     // Determines if the other given student has the same name
@@ -172,12 +169,8 @@ class Course extends TextbookHaver {
     }
 
     // Adds a student to the course
-    // Secondcall is set to true to prevent an infinite loop
-    public function addStudent(Student $student, bool $secondCall = false) : void {
+    public function addStudent(Student $student) : void {
         $this->students->add($student);
-        if (!$secondCall) {
-            $student->addCourse($this);
-        }
     }
 
     // Checks if the other given course has the exact same name
@@ -193,6 +186,18 @@ class Course extends TextbookHaver {
     // Turns the student into a human readable string
     public function toString() : string {
         return $this->name;
+    }
+
+    // echoes all the student options that a course has in a dropdown menu for html
+    public function echoAllStudentOptions(StudentList $allStudents) : void {
+        foreach ($allStudents as $option) {
+            if ($this->students->containsIdentical($option)) {
+                continue;
+            }
+            // When the value of the dropdown is gotten this will be it, in order for it to be easily appended to a request link
+            /** @var string */ $linkParams = $this->toLinkParameters() . $option->toLinkParameters();
+            echo "          <option value=\"$linkParams\">{$option->toString()}</option>";
+        }
     }
 }
 
@@ -240,7 +245,7 @@ class TextbookList extends BaseList {
 
     // Checks if an identical textbook is in the list
     public function containsIdentical(Textbook $textbook) : bool {
-        foreach ($this->items as $other) {
+        foreach ($this as $other) {
             if ($textbook->isIdentical($other)) {
                 return true;
             }
@@ -250,7 +255,7 @@ class TextbookList extends BaseList {
 
     // Gets an identical textbook from the list
     public function getIdentical(Textbook $textbook) : Textbook|null {
-        foreach ($this->items as $other) {
+        foreach ($this as $other) {
             if ($textbook->isIdentical($other)) {
                 return $other;
             }
@@ -258,14 +263,73 @@ class TextbookList extends BaseList {
         return null;
     }
 
+    // Gets the indeces of an identical textbook from the list
+    public function getIdenticalIndeces(Textbook $textbook) : array {
+        $indeces = array();
+        for ($i = 0; $i < $this->count(); $i++) {
+            if ($textbook->isIdentical($this->get($i))) {
+                array_push($indeces, $i);
+            }
+        }
+        return $indeces;
+    }
+
+    // Gets a textbook with the same name
+    public function getSameName(Textbook $textbook) : Textbook|null {
+        foreach($this as $other) {
+            if ($textbook->getTitle() == $other->getTitle()) {
+                return $other;
+            }
+        }
+        return null;
+    }
+
     // echoes all the given textbooks as items in a table for html
-    public function echoAll() : void {
-        foreach ($this->items as $textbook) {
+    public function echoAll(bool $showDifference = false, TextbookList $courseTextbooks = null) : void {
+        foreach ($this as $textbook) {
             echo "<tr>";
-            echo "  <td>{$textbook->getTitle()}</td>";
-            echo "  <td>{$textbook->getPublisher()}</td>";
-            echo "  <td>{$textbook->getEdition()}</td>";
-            echo "  <td>{$textbook->getPrinting()}</td>";
+            if (!$showDifference) {
+                // Just print out the textbook without color if not showing dif
+                    echo "<td>{$textbook->getTitle()}</td>";
+                    echo "<td>{$textbook->getPublisher()}</td>";
+                    echo "<td>{$textbook->getEdition()}</td>";
+                    echo "<td>{$textbook->getPrinting()}</td>";
+            } else {
+                // Print out with color of what's wrong or right
+                $titleColor = "";
+                $publisherColor = "";
+                $editionColor = "";
+                $printingColor = "";
+                
+                // If the textbook is identical to one of the requirements then make all green
+                if (!is_null($courseTextbooks->getIdentical($textbook))) {
+                    $titleColor = "right";
+                    $publisherColor = "right";
+                    $editionColor = "right";
+                    $printingColor = "right";
+                } else {
+                    $sameTitle = $courseTextbooks->getSameName($textbook);
+                    // If the title doesn't match any on of the requirements them make all red
+                    if (is_null($sameTitle)) {
+                        $titleColor = "wrong";
+                        $publisherColor = "wrong";
+                        $editionColor = "wrong";
+                        $printingColor = "wrong";
+                    } else  {
+                        $titleColor = "right";
+                        // since title is the same, check the rest
+                        $publisherColor = $textbook->getPublisher() == $sameTitle->getPublisher() ? "right" : "wrong";
+                        $editionColor = $textbook->getEdition() == $sameTitle->getEdition() ? "right" : "wrong";
+                        $printingColor = $textbook->getPrinting() == $sameTitle->getPrinting() ? "right" : "wrong";
+                    }
+                }
+
+                // print with colors now
+                echo "<td class=\"$titleColor\">{$textbook->getTitle()}</td>";
+                echo "<td class=\"$publisherColor\">{$textbook->getPublisher()}</td>";
+                echo "<td class=\"$editionColor\">{$textbook->getEdition()}</td>";
+                echo "<td class=\"$printingColor\">{$textbook->getPrinting()}</td>";
+            }
             echo "</tr>";
         }
     }
@@ -273,6 +337,34 @@ class TextbookList extends BaseList {
     // Adds a new textbook
     public function add(Textbook $textbook) : void {
         array_push($this->items, $textbook);
+    }
+
+    // replaces the textbook at the index
+    public function set(int $index, Textbook $textbook) : void {
+        $this->items[$index] = $textbook;
+    }
+
+    // gets the textbook at the index
+    public function get(int $index) : Textbook {
+        return $this->items[$index];
+    }
+
+    // Replaces identical textbooks in students and courses with ones from this list
+    public function replaceIdenticalIn(StudentList $allStudents, CourseList $allCourses) {
+        foreach ($this as $textbook) {
+            // Replace all in students
+            foreach ($allStudents as $student) {
+                foreach ($student->getTextbooks()->getIdenticalIndeces($textbook) as $i) {
+                    $student->getTextbooks()->set($i, $textbook);
+                }
+            }
+            // Replace all in courses
+            foreach ($allCourses as $course) {
+                foreach ($course->getTextbooks()->getIdenticalIndeces($textbook) as $i) {
+                    $course->getTextbooks()->set($i, $textbook);
+                }
+            }
+        }
     }
 
     // Adds a new textbook from request params and echoes all textbooks
@@ -300,7 +392,7 @@ class StudentList extends BaseList {
 
     // Checks if another student with the same name exists in the list
     public function containsIdentical(Student $student) : bool {
-        foreach ($this->items as $other) {
+        foreach ($this as $other) {
             if ($student->isIdentical($other)) {
                 return true;
             }
@@ -310,7 +402,7 @@ class StudentList extends BaseList {
 
     // Gets an identical student from the list
     public function getIdentical(Student $student) : Student|null {
-        foreach ($this->items as $other) {
+        foreach ($this as $other) {
             if ($student->isIdentical($other)) {
                 return $other;
             }
@@ -318,9 +410,20 @@ class StudentList extends BaseList {
         return null;
     }
 
+    // Gets the indeces of an identical students from the list
+    public function getIdenticalIndeces(Student $student) : array {
+        $indeces = array();
+        for ($i = 0; $i < $this->count(); $i++) {
+            if ($student->isIdentical($this->get($i))) {
+                array_push($indeces, $i);
+            }
+        }
+        return $indeces;
+    }
+
     // echoes all the given students as items in a table for html
-    public function echoAll(TextbookList $allTextbooks) : void {    
-        foreach ($this->items as $student) {
+    public function echoAll(TextbookList $allTextbooks, bool $showDifference = false, TextbookList $courseTextbooks = null) : void {    
+        foreach ($this as $student) {
             echo "<tr>";
             echo "  <td>{$student->getName()}</td>";
             echo "  <td>";
@@ -335,16 +438,19 @@ class StudentList extends BaseList {
             echo "              </tr>";
             echo "          </thead>";
             echo "          <tbody>";
-            $student->getTextbooks()->echoAll();
+            $student->getTextbooks()->echoAll($showDifference, $courseTextbooks);
             echo "          </tbody>";
             echo "      </table>";
             // Echo textbooks student can get as dropdown and button
-            echo "      <form action=\"project1.php\">";
-            echo "          <select name=\"options\"/>";
-            $student->echoAllTextbookOptions($allTextbooks);
-            echo "          </select>";
-            echo "          <button type=\"button\" onclick=\"addTextbookToStudent(this.form)\">Add Textbook</button>";
-            echo "      </form>";
+            // don't show when in the course difference shower
+            if (!$showDifference) {
+                echo "  <form action=\"project1.php\">";
+                echo "      <select name=\"options\"/>";
+                $student->echoAllTextbookOptions($allTextbooks);
+                echo "      </select>";
+                echo "      <button type=\"button\" onclick=\"addTextbookToStudent(this.form)\">Add Textbook</button>";
+                echo "  </form>";
+            }
             echo "  </td>";
             echo "</tr>";
         }
@@ -353,6 +459,28 @@ class StudentList extends BaseList {
     // Adds a new student
     public function add(Student $student) : void {
         array_push($this->items, $student);
+    }
+
+    // replaces the student at the index
+    public function set(int $index, Student $student) : void {
+        $this->items[$index] = $student;
+    }
+
+    // gets the student at the index
+    public function get(int $index) : Student {
+        return $this->items[$index];
+    }
+
+    // Replaces identical students in courses with ones from this list
+    public function replaceIdenticalIn(CourseList $allCourses) {
+        foreach ($this as $student) {
+            // Replace all in courses
+            foreach ($allCourses as $course) {
+                foreach ($course->getStudents()->getIdenticalIndeces($student) as $i) {
+                    $course->getStudents()->set($i, $student);
+                }
+            }
+        }
     }
 
     // Adds a new student from request params and echoes all students
@@ -405,7 +533,7 @@ class CourseList extends BaseList {
 
     // Checks if another course with the same name exists in the list
     public function containsIdentical(Course $course) : bool {
-        foreach ($this->items as $other) {
+        foreach ($this as $other) {
             if ($course->isIdentical($other)) {
                 return true;
             }
@@ -415,7 +543,7 @@ class CourseList extends BaseList {
 
     // Gets an identical course from the list
     public function getIdentical(Course $course) : Course|null {
-        foreach ($this->items as $other) {
+        foreach ($this as $other) {
             if ($course->isIdentical($other)) {
                 return $other;
             }
@@ -423,9 +551,20 @@ class CourseList extends BaseList {
         return null;
     }
 
+    // Gets the index of an identical course from the list
+    public function getIdenticalIndeces(Course $course) : array {
+        $indeces = array();
+        for ($i = 0; $i < $this->count(); $i++) {
+            if ($course->isIdentical($this->get($i))) {
+                array_push($indeces, $i);
+            }
+        }
+        return $indeces;
+    }
+
     // echoes all the given courses as items in a table for html
-    public function echoAll(TextbookList $allTextbooks) : void {
-        foreach ($this->items as $course) {
+    public function echoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
+        foreach ($this as $course) {
             echo "<tr>";
             echo "  <td>{$course->getName()}</td>";
             echo "  <td>";
@@ -446,12 +585,32 @@ class CourseList extends BaseList {
             // Echo textbooks course can get as dropdown and button, no more after 2
             if ($course->getTextbooks()->count() < 2) {
                 echo "  <form action=\"project1.php\">";
-                echo "      <select name=\"options\"/>";
+                echo "      <select name=\"options\">";
                 $course->echoAllTextbookOptions($allTextbooks);
                 echo "      </select>";
                 echo "      <button type=\"button\" onclick=\"addTextbookToCourse(this.form)\">Add Textbook</button>";
                 echo "  </form>";
             }
+            // Echo students course has as table
+            echo "  </td>";
+            echo "  <td>";
+            echo "      <table class=\"bordered\">";
+            echo "          <thead>";
+            echo "              <tr>";
+            echo "                  <td>Name</td>";
+            echo "                  <td>Textbooks</td>";
+            echo "              </tr>";
+            echo "          </thead>";
+            echo "          <tbody>";
+            $course->getStudents()->echoAll($allTextbooks, true, $course->getTextbooks());
+            echo "          </tbody>";
+            echo "      </table>";
+            echo "      <form action=\"project1.php\">";
+            echo "          <select name=\"options\">";
+            $course->echoAllStudentOptions($allStudents);
+            echo "          </select>";
+            echo "          <button type=\"button\" onclick=\"addStudentToCourse(this.form)\">Add Student</button>";
+            echo "      </form>";
             echo "  </td>";
             echo "</tr>";
         }
@@ -462,8 +621,30 @@ class CourseList extends BaseList {
         array_push($this->items, $course);
     }
 
+    // replaces the course at the index
+    public function set(int $index, Course $course) : void {
+        $this->items[$index] = $course;
+    }
+
+    // gets the course at the index
+    public function get(int $index) : Course {
+        return $this->items[$index];
+    }
+
+    // Replaces identical courses in students with ones from this list
+    public function replaceIdenticalIn(StudentList $allStudents) {
+        foreach ($this as $course) {
+            // Replace all in students
+            foreach ($allStudents as $student) {
+                foreach ($student->getCourses()->getIdenticalIndeces($course) as $i) {
+                    $student->getCourses()->set($i, $course);
+                }
+            }
+        }
+    }
+
     // Adds a new course from request params and echoes all courses
-    public function addRequestAndEchoAll(TextbookList $allTextbooks) : void {
+    public function addRequestAndEchoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
         // Recieve course from request
         /** @var Course */ $newCourse = Course::CreateFromRequest();
     
@@ -474,11 +655,11 @@ class CourseList extends BaseList {
         }
 
         $this->add($newCourse);
-        $this->echoAll($allTextbooks);
+        $this->echoAll($allStudents, $allTextbooks);
     }
 
     // Adds requested existing textbook to requested course and echoes all courses
-    public function addTextbookRequestAndEchoAll(TextbookList $allTextbooks) : void {
+    public function addTextbookRequestAndEchoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
         // Recieve textbook and course from request
         /** @var Course */ $tempCourse = Course::CreateFromRequest();
         /** @var Textbook */ $tempTextbook = Textbook::CreateFromRequest();
@@ -499,7 +680,33 @@ class CourseList extends BaseList {
 
         // Add textbook to student and echo all
         $course->addTextbook($textbook);
-        $this->echoAll($allTextbooks);
+        $this->echoAll($allStudents, $allTextbooks);
+    }
+
+    // Adds requested existing student to requested course and echoes all courses
+    public function addStudentRequestedAndEchoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
+        // Recieve student and course from request
+        /** @var Student */ $tempStudent = Student::CreateFromRequest();
+        /** @var Course */ $tempCourse = Course::CreateFromRequest();
+
+        // Find student and course in list
+        /** @var Student */ $student = $allStudents->getIdentical($tempStudent);
+        /** @var Course */ $course = $this->getIdentical($tempCourse);
+
+        // Check if either student or course were not found
+        if (is_null($student)) {
+            echo "studentnotfound";
+            return;
+        }
+        if (is_null($course)) {
+            echo "coursenotfound";
+            return;
+        }
+
+        // Add student to course and vice versa, then 
+        $course->addStudent($student);
+        $student->addCourse($course);
+        $this->echoAll($allStudents, $allTextbooks);
     }
 }
 
@@ -527,6 +734,11 @@ function writeToFile(string $path, $object) : void {
 /** @var StudentList */ $students = readFromFile("students.txt", new StudentList());
 /** @var CourseList */ $courses = readFromFile("courses.txt", new CourseList());
 
+// Replace identical elements with the ones from a main list such that modifying an item will affect the same item in another item's list
+$textbooks->replaceIdenticalIn($students, $courses);
+$students->replaceIdenticalIn($courses);
+$courses->replaceIdenticalIn($students);
+
 // Get the kind of request
 /** @var string */ $requestType = $_REQUEST["request"];
 
@@ -550,11 +762,11 @@ switch ($requestType) {
         break;
     // echoes all courses
     case "getCourses":
-        $courses->echoAll($textbooks);
+        $courses->echoAll($students, $textbooks);
         break;
     // adds a new course and echoes all courses back
     case "addCourse":
-        $courses->addRequestAndEchoAll($textbooks);
+        $courses->addRequestAndEchoAll($students, $textbooks);
         break;
     // Add existing textbook to student
     case "addTextbookToStudent": 
@@ -562,31 +774,12 @@ switch ($requestType) {
         break;
     // Add existing textbook to course
     case "addTextbookToCourse": 
-        $courses->addTextbookRequestAndEchoAll($textbooks);
+        $courses->addTextbookRequestAndEchoAll($students, $textbooks);
         break;
     // Add existing student to course
-    /*case "addStudentToCourse": {
-        // Recieve student and course from request
-        /** @var Student  $tempStudent = Course::CreateFromRequest();
-        /** @var Course  $tempCourse = Course::CreateFromRequest();
-
-        // Find student and course in list
-        /** @var Student  $student = getIdenticalStudent($tempStudent, ...$students);
-        /** @var Course  $course = getIdenticalCourse($tempCourse, ...$courses);
-
-        // Check if either student or course were not found
-        if (is_null($student)) {
-            echo "studentnotfound";
-            break;
-        }
-        if (is_null($course)) {
-            echo "coursenotfound";
-            break;
-        }
-
-        // Add student to course and vice versa
-        $course->addStudent($student);
-    }*/
+    case "addStudentToCourse":
+        $courses->addStudentRequestedAndEchoAll($students, $textbooks);
+        break;
     default: break;
 }
 
