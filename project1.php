@@ -87,7 +87,16 @@ abstract class TextbookHaver {
             }
             // When the value of the dropdown is gotten this will be it, in order for it to be easily appended to a request link
             /** @var string */ $linkParams = $this->toLinkParameters() . $option->toLinkParameters();
-            echo "          <option value=\"$linkParams\">{$option->toString()}</option>";
+            echo "<option value=\"$linkParams\">{$option->toString()}</option>";
+        }
+    }
+
+    // echoes all the textbook options that the student or course can remove in a dropdown menu for html
+    public function echoAllTextbookDeleteOptions() {
+        foreach ($this->textbooks as $option) {
+            // When the value of the dropdown is gotten this will be it, in order for it to be easily appended to a request link
+            /** @var string */ $linkParams = $this->toLinkParameters() . $option->toLinkParameters();
+            echo "<option value=\"$linkParams\">{$option->toString()}</option>";
         }
     }
 
@@ -97,7 +106,6 @@ abstract class TextbookHaver {
 class Student extends TextbookHaver {
     // Properties
     private string $name;
-    private CourseList $courses;
 
     // Creates a new student from the request params
     public static function CreateFromRequest() : Student {
@@ -105,7 +113,6 @@ class Student extends TextbookHaver {
         
         // Recieved variables from the student request
         $newStudent->name = $_REQUEST["studentName"];
-        $newStudent->courses = new CourseList();
 
         return $newStudent;
     }
@@ -113,17 +120,6 @@ class Student extends TextbookHaver {
     // Gets the name of the student
     public function getName() : string {
         return $this->name;
-    }
-
-    // Gets the courses the student is in
-    public function getCourses() : CourseList {
-        return $this->courses;
-    }
-
-    // Adds a course to the student
-    // Secondcall is set to true to prevent an infinite loop
-    public function addCourse(Course $course) : void {
-        $this->courses->add($course);
     }
 
     // Determines if the other given student has the same name
@@ -199,6 +195,15 @@ class Course extends TextbookHaver {
             echo "          <option value=\"$linkParams\">{$option->toString()}</option>";
         }
     }
+
+    // echoes all the student options that a course can remove in a dropdown menu for html
+    public function echoAllStudentDeleteOptions() : void {
+        foreach ($this->getStudents() as $option) {
+            // When the value of the dropdown is gotten this will be it, in order for it to be easily appended to a request link
+            /** @var string */ $linkParams = $this->toLinkParameters() . $option->toLinkParameters();
+            echo "          <option value=\"$linkParams\">{$option->toString()}</option>";
+        }
+    }
 }
 
 // Base class for my custom lists
@@ -209,6 +214,14 @@ class BaseList implements Iterator {
     // gets the number of items in the list
     public function count() : int {
         return count($this->items);
+    }
+
+    // deletes the index
+    public function delete(int $index) {
+        // remove element
+        unset($this->items[$index]);
+        // reorder elements ascending with no gaps
+        $this->items = array_values($this->items);
     }
 
     // gets the current item in a foreach loop
@@ -263,15 +276,14 @@ class TextbookList extends BaseList {
         return null;
     }
 
-    // Gets the indeces of an identical textbook from the list
-    public function getIdenticalIndeces(Textbook $textbook) : array {
-        $indeces = array();
+    // Gets the index of an identical textbook from the list
+    public function getIdenticalIndex(Textbook $textbook) : int|null {
         for ($i = 0; $i < $this->count(); $i++) {
             if ($textbook->isIdentical($this->get($i))) {
-                array_push($indeces, $i);
+                return $i;
             }
         }
-        return $indeces;
+        return null;
     }
 
     // Gets a textbook with the same name
@@ -285,7 +297,7 @@ class TextbookList extends BaseList {
     }
 
     // echoes all the given textbooks as items in a table for html
-    public function echoAll(bool $showDifference = false, TextbookList $courseTextbooks = null) : void {
+    public function echoAll(bool $showDelete = true, bool $showDifference = false, TextbookList $courseTextbooks = null) : void {
         foreach ($this as $textbook) {
             echo "<tr>";
             if (!$showDifference) {
@@ -330,6 +342,9 @@ class TextbookList extends BaseList {
                 echo "<td class=\"$editionColor\">{$textbook->getEdition()}</td>";
                 echo "<td class=\"$printingColor\">{$textbook->getPrinting()}</td>";
             }
+            if ($showDelete) {
+                echo "<td><button type=\"button\" onclick=\"deleteTextbook('{$textbook->toLinkParameters()}')\">X</button></td>";
+            }
             echo "</tr>";
         }
     }
@@ -354,13 +369,15 @@ class TextbookList extends BaseList {
         foreach ($this as $textbook) {
             // Replace all in students
             foreach ($allStudents as $student) {
-                foreach ($student->getTextbooks()->getIdenticalIndeces($textbook) as $i) {
+                $i = $student->getTextbooks()->getIdenticalIndex($textbook);
+                if (!is_null($i)) {
                     $student->getTextbooks()->set($i, $textbook);
                 }
             }
             // Replace all in courses
             foreach ($allCourses as $course) {
-                foreach ($course->getTextbooks()->getIdenticalIndeces($textbook) as $i) {
+                $i = $course->getTextbooks()->getIdenticalIndex($textbook);
+                if (!is_null($i)) {
                     $course->getTextbooks()->set($i, $textbook);
                 }
             }
@@ -380,6 +397,32 @@ class TextbookList extends BaseList {
 
         // add and echo
         $this->add($newTextbook);
+        $this->echoAll();
+    }
+
+    // Deletes the textbook from request params and echoes all textbooks, and removes the textbook from students and courses
+    public function deleteRequestAndEchoAll(StudentList $allStudents, CourseList $allCourses) : void {
+        // Recieve textbook from request
+        /** @var Textbook */ $oldTextbook = Textbook::CreateFromRequest();
+
+        // Delete from main list
+        $this->delete($this->getIdenticalIndex($oldTextbook));
+        // Delete from the students
+        foreach ($allStudents as $student) {
+            $i = $student->getTextbooks()->getIdenticalIndex($oldTextbook);
+            if (!is_null($i)) {
+                $student->getTextbooks()->delete($i);
+            }
+        }
+        // Delete from the courses
+        foreach ($allCourses as $course) {
+            $i = $course->getTextbooks()->getIdenticalIndex($oldTextbook);
+            if (!is_null($i)) {
+                $course->getTextbooks()->delete($i);
+            }
+        }
+
+        // echo the textbooks left
         $this->echoAll();
     }
 }
@@ -410,19 +453,18 @@ class StudentList extends BaseList {
         return null;
     }
 
-    // Gets the indeces of an identical students from the list
-    public function getIdenticalIndeces(Student $student) : array {
-        $indeces = array();
+    // Gets the index of an identical students from the list
+    public function getIdenticalIndex(Student $student) : int|null {
         for ($i = 0; $i < $this->count(); $i++) {
             if ($student->isIdentical($this->get($i))) {
-                array_push($indeces, $i);
+                return $i;
             }
         }
-        return $indeces;
+        return null;
     }
 
     // echoes all the given students as items in a table for html
-    public function echoAll(TextbookList $allTextbooks, bool $showDifference = false, TextbookList $courseTextbooks = null) : void {    
+    public function echoAll(TextbookList $allTextbooks, bool $showDynamicUi = true, bool $showDifference = false, TextbookList $courseTextbooks = null) : void {    
         foreach ($this as $student) {
             echo "<tr>";
             echo "  <td>{$student->getName()}</td>";
@@ -438,20 +480,30 @@ class StudentList extends BaseList {
             echo "              </tr>";
             echo "          </thead>";
             echo "          <tbody>";
-            $student->getTextbooks()->echoAll($showDifference, $courseTextbooks);
+            $student->getTextbooks()->echoAll(false, $showDifference, $courseTextbooks);
             echo "          </tbody>";
             echo "      </table>";
-            // Echo textbooks student can get as dropdown and button
             // don't show when in the course difference shower
-            if (!$showDifference) {
-                echo "  <form action=\"project1.php\">";
-                echo "      <select name=\"options\"/>";
+            if (!$showDifference && $showDynamicUi) {
+                // Echo textbooks student can get as dropdown and button
+                echo "  <form class=\"inline\" action=\"project1.php\">";
+                echo "      <select name=\"options\">";
                 $student->echoAllTextbookOptions($allTextbooks);
                 echo "      </select>";
                 echo "      <button type=\"button\" onclick=\"addTextbookToStudent(this.form)\">Add Textbook</button>";
                 echo "  </form>";
+                // Echo textbooks student can remove as a dropdown and button
+                echo "  <form class=\"inline\" action=\"project1.php\">";
+                echo "      <select name=\"options\">";
+                $student->echoAllTextbookDeleteOptions();
+                echo "      </select>";
+                echo "      <button type=\"button\" onclick=\"removeTextbookFromStudent(this.form)\">Remove Textbook</button>";
+                echo "  </form>";
             }
             echo "  </td>";
+            if ($showDynamicUi) {
+                echo "  <td><button type=\"button\" onclick=\"deleteStudent('{$student->toLinkParameters()}')\">X</button></td>";
+            }
             echo "</tr>";
         }
     }
@@ -476,7 +528,8 @@ class StudentList extends BaseList {
         foreach ($this as $student) {
             // Replace all in courses
             foreach ($allCourses as $course) {
-                foreach ($course->getStudents()->getIdenticalIndeces($student) as $i) {
+                $i = $course->getStudents()->getIdenticalIndex($student);
+                if (!is_null($i)) {
                     $course->getStudents()->set($i, $student);
                 }
             }
@@ -496,6 +549,25 @@ class StudentList extends BaseList {
 
         // Add student and echo all
         $this->add($newStudent);
+        $this->echoAll($allTextbooks);
+    }
+
+    // Deletes the student from request params and echoes all students, and removes the student from courses
+    public function deleteRequestAndEchoAll(CourseList $allCourses, TextbookList $allTextbooks) : void {
+        // Recieve student from request
+        /** @var Student */ $oldStudent = Student::CreateFromRequest();
+
+        // Delete from main list
+        $this->delete($this->getIdenticalIndex($oldStudent));
+        // Delete from the courses
+        foreach ($allCourses as $course) {
+            $i = $course->getStudents()->getIdenticalIndex($oldStudent);
+            if (!is_null($i)) {
+                $course->getStudents()->delete($i);
+            }
+        }
+
+        // echo the students left
         $this->echoAll($allTextbooks);
     }
 
@@ -521,6 +593,29 @@ class StudentList extends BaseList {
 
         // Add textbook to student and echo all
         $student->addTextbook($textbook);
+        $this->echoAll($allTextbooks);
+    }
+
+    // Removes requested existing textbook from requested student and echoes all students
+    public function removeTextbookRequestAndEchoAll(TextbookList $allTextbooks) : void {
+        // Recieve textbook and student from request
+        /** @var Student */ $tempStudent = Student::CreateFromRequest();
+        /** @var Textbook */ $oldTextbook = Textbook::CreateFromRequest();
+
+        // Find student in list
+        /** @var Student */ $student = $this->getIdentical($tempStudent);
+
+        // Check if student were not found
+        if (is_null($student)) {
+            echo "studentnotfound";
+            return;
+        }
+
+        // Remove textbook from student and echo all
+        $i = $student->getTextbooks()->getIdenticalIndex($oldTextbook);
+        if (!is_null($i)) {
+            $student->getTextbooks()->delete($i);
+        }
         $this->echoAll($allTextbooks);
     }
 }
@@ -552,14 +647,13 @@ class CourseList extends BaseList {
     }
 
     // Gets the index of an identical course from the list
-    public function getIdenticalIndeces(Course $course) : array {
-        $indeces = array();
+    public function getIdenticalIndex(Course $course) : int|null {
         for ($i = 0; $i < $this->count(); $i++) {
             if ($course->isIdentical($this->get($i))) {
-                array_push($indeces, $i);
+                return $i;
             }
         }
-        return $indeces;
+        return null;
     }
 
     // echoes all the given courses as items in a table for html
@@ -579,18 +673,28 @@ class CourseList extends BaseList {
             echo "              </tr>";
             echo "          </thead>";
             echo "          <tbody>";
-            $course->getTextbooks()->echoAll();
+            $course->getTextbooks()->echoAll(false);
             echo "          </tbody>";
             echo "      </table>";
-            // Echo textbooks course can get as dropdown and button, no more after 2
+            // Echo textbooks course can get as dropdown and button
+            echo "      <form class=\"inline\" action=\"project1.php\">";
+            echo "          <select name=\"options\">";
+            $course->echoAllTextbookOptions($allTextbooks);
+            echo "          </select>";
+            // no more after 2
             if ($course->getTextbooks()->count() < 2) {
-                echo "  <form action=\"project1.php\">";
-                echo "      <select name=\"options\">";
-                $course->echoAllTextbookOptions($allTextbooks);
-                echo "      </select>";
                 echo "      <button type=\"button\" onclick=\"addTextbookToCourse(this.form)\">Add Textbook</button>";
-                echo "  </form>";
+            } else {
+                echo "      <button disabled>Add Textbook</button>";
             }
+            echo "      </form>";
+            // Echo textbooks course can remove as a dropdown and button
+            echo "      <form class=\"inline\" action=\"project1.php\">";
+            echo "          <select name=\"options\">";
+            $course->echoAllTextbookDeleteOptions();
+            echo "          </select>";
+            echo "          <button type=\"button\" onclick=\"removeTextbookFromCourse(this.form)\">Remove Textbook</button>";
+            echo "      </form>";
             // Echo students course has as table
             echo "  </td>";
             echo "  <td>";
@@ -602,16 +706,26 @@ class CourseList extends BaseList {
             echo "              </tr>";
             echo "          </thead>";
             echo "          <tbody>";
-            $course->getStudents()->echoAll($allTextbooks, true, $course->getTextbooks());
+            $course->getStudents()->echoAll($allTextbooks, false, $course->getTextbooks()->count() > 0, $course->getTextbooks());
             echo "          </tbody>";
             echo "      </table>";
-            echo "      <form action=\"project1.php\">";
+            // The students that it can add
+            echo "      <form class=\"inline\" action=\"project1.php\">";
             echo "          <select name=\"options\">";
             $course->echoAllStudentOptions($allStudents);
             echo "          </select>";
             echo "          <button type=\"button\" onclick=\"addStudentToCourse(this.form)\">Add Student</button>";
             echo "      </form>";
+            // The students that it can remove
+            echo "      <form class=\"inline\" action=\"project1.php\">";
+            echo "          <select name=\"options\">";
+            $course->echoAllStudentDeleteOptions();
+            echo "          </select>";
+            echo "          <button type=\"button\" onclick=\"removeStudentFromCourse(this.form)\">Remove Student</button>";
+            echo "      </form>";
             echo "  </td>";
+            // Delete button for the course
+            echo "  <td><button type=\"button\" onclick=\"deleteCourse('{$course->toLinkParameters()}')\">X</button></td>";
             echo "</tr>";
         }
     }
@@ -631,18 +745,6 @@ class CourseList extends BaseList {
         return $this->items[$index];
     }
 
-    // Replaces identical courses in students with ones from this list
-    public function replaceIdenticalIn(StudentList $allStudents) {
-        foreach ($this as $course) {
-            // Replace all in students
-            foreach ($allStudents as $student) {
-                foreach ($student->getCourses()->getIdenticalIndeces($course) as $i) {
-                    $student->getCourses()->set($i, $course);
-                }
-            }
-        }
-    }
-
     // Adds a new course from request params and echoes all courses
     public function addRequestAndEchoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
         // Recieve course from request
@@ -655,6 +757,18 @@ class CourseList extends BaseList {
         }
 
         $this->add($newCourse);
+        $this->echoAll($allStudents, $allTextbooks);
+    }
+
+    // Deletes the course from request params and echoes all courses
+    public function deleteRequestAndEchoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
+        // Recieve course from request
+        /** @var course */ $oldCourse = Course::CreateFromRequest();
+
+        // Delete from main list
+        $this->delete($this->getIdenticalIndex($oldCourse));
+
+        // echo the courses left
         $this->echoAll($allStudents, $allTextbooks);
     }
 
@@ -703,9 +817,54 @@ class CourseList extends BaseList {
             return;
         }
 
-        // Add student to course and vice versa, then 
+        // Add student to course then echo all courses
         $course->addStudent($student);
-        $student->addCourse($course);
+        $this->echoAll($allStudents, $allTextbooks);
+    }
+
+    // Removes requested existing textbook from requested course and echoes all courses
+    public function removeTextbookRequestAndEchoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
+        // Recieve textbook and course from request
+        /** @var Course */ $tempCourse = Course::CreateFromRequest();
+        /** @var Textbook */ $oldTextbook = Textbook::CreateFromRequest();
+
+        // Find course in list
+        /** @var Course */ $course = $this->getIdentical($tempCourse);
+
+        // Check if course were not found
+        if (is_null($course)) {
+            echo "coursenotfound";
+            return;
+        }
+
+        // Remove textbook from course and echo all
+        $i = $course->getTextbooks()->getIdenticalIndex($oldTextbook);
+        if (!is_null($i)) {
+            $course->getTextbooks()->delete($i);
+        }
+        $this->echoAll($allStudents, $allTextbooks);
+    }
+
+    // Removes requested existing student from requested course and echoes all courses
+    public function removeStudentRequestAndEchoAll(StudentList $allStudents, TextbookList $allTextbooks) : void {
+        // Recieve student and course from request
+        /** @var Course */ $tempCourse = Course::CreateFromRequest();
+        /** @var Student */ $oldStudent = Student::CreateFromRequest();
+
+        // Find course in list
+        /** @var Course */ $course = $this->getIdentical($tempCourse);
+
+        // Check if course were not found
+        if (is_null($course)) {
+            echo "coursenotfound";
+            return;
+        }
+
+        // Remove student from course and echo all
+        $i = $course->getStudents()->getIdenticalIndex($oldStudent);
+        if (!is_null($i)) {
+            $course->getStudents()->delete($i);
+        }
         $this->echoAll($allStudents, $allTextbooks);
     }
 }
@@ -737,7 +896,6 @@ function writeToFile(string $path, $object) : void {
 // Replace identical elements with the ones from a main list such that modifying an item will affect the same item in another item's list
 $textbooks->replaceIdenticalIn($students, $courses);
 $students->replaceIdenticalIn($courses);
-$courses->replaceIdenticalIn($students);
 
 // Get the kind of request
 /** @var string */ $requestType = $_REQUEST["request"];
@@ -779,6 +937,30 @@ switch ($requestType) {
     // Add existing student to course
     case "addStudentToCourse":
         $courses->addStudentRequestedAndEchoAll($students, $textbooks);
+        break;
+    // Delete the textbook from everywhere
+    case "deleteTextbook":
+        $textbooks->deleteRequestAndEchoAll($students, $courses);
+        break;
+    // Removes the textbook from the student
+    case "removeTextbookFromStudent":
+        $students->removeTextbookRequestAndEchoAll($textbooks);
+        break;
+    // Removes the textbook from the course
+    case "removeTextbookFromCourse":
+        $courses->removeTextbookRequestAndEchoAll($students, $textbooks);
+        break;
+    // Deletes the student from everywhere
+    case "deleteStudent":
+        $students->deleteRequestAndEchoAll($courses, $textbooks);
+        break;
+    // Removes the student from the course
+    case "removeStudentFromCourse":
+        $courses->removeStudentRequestAndEchoAll($students, $textbooks);
+        break;
+    // Deletes the course:
+    case "deleteCourse":
+        $courses->deleteRequestAndEchoAll($students, $textbooks);
         break;
     default: break;
 }

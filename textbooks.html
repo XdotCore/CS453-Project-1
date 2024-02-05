@@ -51,6 +51,7 @@
                     <td>Publisher</td>
                     <td>Edition</td>
                     <td>Printing</td>
+                    <td>Delete?</td>
                 </tr>
             </thead>
             <tbody id="textbookList">
@@ -114,6 +115,20 @@
                         return;
                     }
 
+                    // update textbook html
+                    document.getElementById("textbookList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+
+            // Deletes a textbook
+            function deleteTextbook(textbook) {
+                const request = new XMLHttpRequest();
+                // textbook was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=deleteTextbook" + textbook);
+
+                onRecievedFromRequest(request, function() {
                     // update textbook html
                     document.getElementById("textbookList").innerHTML = request.responseText;
                 });

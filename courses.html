@@ -38,6 +38,7 @@
                     <td>Name</td>
                     <td>Textbooks</td>
                     <td>Students</td>
+                    <td>Delete?</td>
                 </tr>
             </thead>
             <tbody id="courseList">
@@ -91,6 +92,20 @@
                 request.send();
             }
 
+            // Deletes a course
+            function deleteCourse(course) {
+                const request = new XMLHttpRequest();
+                // course was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=deleteCourse" + course);
+
+                onRecievedFromRequest(request, function() {
+                    // update course html
+                    document.getElementById("courseList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+
             // Adds a textbook to the course from the input provided by the user
             function addTextbookToCourse(form) {
                 // The variables to send in the request
@@ -119,7 +134,7 @@
 
                     // update course html
                     document.getElementById("courseList").innerHTML = request.responseText;
-                })
+                });
 
                 request.send();
             }
@@ -147,6 +162,64 @@
                     }
                     if (request.responseText === "coursenotfound") {
                         alert("The course to add the student to could not be found");
+                        return;
+                    }
+
+                    // update course html
+                    document.getElementById("courseList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+
+            // Removes a textbook from the course from the input provides by the user
+            function removeTextbookFromCourse(form) {
+                // The variables to send in the request
+                const courseAndTextbook = form.options.value;
+                
+                // Check for empty/invalid inputs
+                if (!courseAndTextbook) {
+                    alert("You must select a textbook to remove one");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                // courseAndTextbook was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=removeTextbookFromCourse" + courseAndTextbook);
+
+                onRecievedFromRequest(request, function() {
+                    // check for errors
+                    if (request.responseText === "coursenotfound") {
+                        alert("The course to remove the textbook from could not be found");
+                        return;
+                    }
+
+                    // update course html
+                    document.getElementById("courseList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+
+            // Removes a student from the course from the input provides by the user
+            function removeStudentFromCourse(form) {
+                // The variables to send in the request
+                const courseAndStudent = form.options.value;
+                
+                // Check for empty/invalid inputs
+                if (!courseAndStudent) {
+                    alert("You must select a student to remove one");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                // courseAndStudent was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=removeStudentFromCourse" + courseAndStudent);
+
+                onRecievedFromRequest(request, function() {
+                    // check for errors
+                    if (request.responseText === "coursenotfound") {
+                        alert("The course to remove the student from could not be found");
                         return;
                     }
 

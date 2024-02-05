@@ -17,3 +17,7 @@ table {
 .right {
     background-color: greenyellow;
 }
+
+.inline {
+    display: inline-block;
+}

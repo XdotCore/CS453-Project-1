@@ -37,6 +37,7 @@
                 <tr>
                     <td>Name</td>
                     <td>Textbooks</td>
+                    <td>Delete?</td>
                 </tr>
             </thead>
             <tbody id="studentList">
@@ -97,7 +98,7 @@
 
                 // Check for empty/invalid inputs
                 if (!studentAndTextbook) {
-                    alert("You must select a textbook to add one.");
+                    alert("You must select a textbook to add one");
                     return;
                 }
 
@@ -117,7 +118,50 @@
 
                     // update student html
                     document.getElementById("studentList").innerHTML = request.responseText;
-                })
+                });
+
+                request.send();
+            }
+
+            // Deletes a student
+            function deleteStudent(student) {
+                const request = new XMLHttpRequest();
+                // student was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=deleteStudent" + student);
+
+                onRecievedFromRequest(request, function() {
+                    // update student html
+                    document.getElementById("studentList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+
+            // Removes a textbook from the student from the input provides by the user
+            function removeTextbookFromStudent(form) {
+                // The variables to send in the request
+                const studentAndTextbook = form.options.value;
+                
+                // Check for empty/invalid inputs
+                if (!studentAndTextbook) {
+                    alert("You must select a textbook to remove one");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                // studentAndTextbook was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=removeTextbookFromStudent" + studentAndTextbook);
+
+                onRecievedFromRequest(request, function() {
+                    // check for errors
+                    if (request.responseText === "studentnotfound") {
+                        alert("The student to remove the textbook from could not be found");
+                        return;
+                    }
+
+                    // update student html
+                    document.getElementById("studentList").innerHTML = request.responseText;
+                });
 
                 request.send();
             }

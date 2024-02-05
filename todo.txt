@@ -1,8 +1,2 @@
-- delete textbooks
- - remove textbooks from students
- - remove textbooks from courses
-- delete students
- - remove students from courses
 - delete courses
  - remove courses from students
-- update fields maybe
