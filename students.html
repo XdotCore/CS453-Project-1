@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <title>CS 453 Project 1</title>
@@ -11,7 +12,7 @@
 
         <h3>Students</h3>
 
-        <!--Input to make a new textbook-->
+        <!--Input to make a new student-->
         <form action="project1.php">
             <table>
                 <thead>
@@ -30,7 +31,7 @@
             <button type="button" onclick="addStudent(this.form)">Add Student</button>
         </form>
 
-        <!--List of all the textbooks-->
+        <!--List of all the students-->
         <table class="bordered">
             <thead>
                 <tr>
@@ -106,6 +107,15 @@
                 request.open("GET", "project1.php?request=addTextbookToStudent" + studentAndTextbook);
 
                 onRecievedFromRequest(request, function() {
+                    // Check for errors
+                    if (request.responseText === "studentnotfound") {
+                        alert("The student to add the textbook to could not be found");
+                        return;
+                    }
+                    if (request.responseText === "textbooknotfound") {
+                        alert("The textbook to add to the student could not be found");
+                    }
+
                     // update student html
                     document.getElementById("studentList").innerHTML = request.responseText;
                 })

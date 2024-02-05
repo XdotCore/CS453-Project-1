@@ -1,3 +1,4 @@
+<!DOCTYPE html>
 <html>
     <head>
         <title>CS 453 Project 1</title>
@@ -10,5 +11,117 @@
         <button disabled>Courses</button>
 
         <h3>Courses</h3>
+
+        <!--Input to make a new course-->
+        <form action="project1.php">
+            <table>
+                <thead>
+                    <tr>
+                        <td>Course:</td>
+                        <td></td>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Name: </td>
+                        <td><input type="text" name="name"/></td>
+                    </tr>
+                </tbody>
+            </table>
+            <button type="button" onclick="addCourse(this.form)">Add Course</button>
+        </form>
+
+        <!--List of all the courses-->
+        <table class="bordered">
+            <thead>
+                <tr>
+                    <td>Name</td>
+                    <td>Textbooks</td>
+                    <td>Students</td>
+                </tr>
+            </thead>
+            <tbody id="courseList">
+                <!--Will be filled in by the php-->
+            </tbody>
+        </table>
+        
+        <script type="text/javascript" src="common.js"></script>
+        <script type="text/javascript">
+            // Gets the courses and applies them to the html
+            function getCourses() {
+                var request = new XMLHttpRequest();
+                request.open("GET", `project1.php?request=getCourses`);
+                
+                onRecievedFromRequest(request, function () {
+                    // update course html
+                    document.getElementById("courseList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+            
+            // call the function so that the page is populated on refresh
+            getCourses();
+
+            // Adds a new course from the input provided by the user
+            function addCourse(form) {
+                // The variables to send in the request
+                const name = form.name.value;
+
+                // Check for empty/invalid inputs
+                if (!name) {
+                    alert("You must enter a name.");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                request.open("GET", `project1.php?request=addCourse&courseName=${name}`);
+
+                onRecievedFromRequest(request, function() {
+                    // check if identical course already exists
+                    if (request.responseText === "exists") {
+                        alert("A course with the same name already exists");
+                        return;
+                    }
+
+                    // update course html
+                    document.getElementById("courseList").innerHTML = request.responseText;
+                });
+
+                request.send();
+            }
+
+            // Adds a textbook to the course from the input provided by the user
+            function addTextbookToCourse(form) {
+                // The variables to send in the request
+                const courseAndTextbook = form.options.value;
+
+                // Check for empty/invalid inputs
+                if (!courseAndTextbook) {
+                    alert("You must select a textbook to add one.");
+                    return;
+                }
+
+                const request = new XMLHttpRequest();
+                // courseAndTextbook was recieved in link format so a simple append is used
+                request.open("GET", "project1.php?request=addTextbookToCourse" + courseAndTextbook);
+
+                onRecievedFromRequest(request, function() {
+                    // Check for errors
+                    if (request.responseText === "coursenotfound") {
+                        alert("The course to add the textbook to could not be found");
+                        return;
+                    }
+                    if (request.responseText === "textbooknotfound") {
+                        alert("The textbook to add to the course could not be found");
+                    }
+
+                    // update course html
+                    document.getElementById("courseList").innerHTML = request.responseText;
+                })
+
+                request.send();
+            }
+        </script>
     </body>
 </html>
